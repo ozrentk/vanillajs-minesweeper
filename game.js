@@ -86,6 +86,7 @@ function createMinesweeperGame(rows = 9, cols = 9, mineCount = 10, domConfig = {
         state.newGameButton.addEventListener('click', () => resetGame());
         
         renderBoard();
+        placeMines();
         updateMinesRemaining();
     }
 
@@ -107,30 +108,46 @@ function createMinesweeperGame(rows = 9, cols = 9, mineCount = 10, domConfig = {
         }
     }
 
-    function placeMines(excludeRow, excludeCol) {
-        let minesPlaced = 0;
-        const excludeCells = new Set();
+    function placeMines(excludeRow = null, excludeCol = null) {
+        // Create sequence of all field indices
+        const allIndices = [];
+        for (let row = 0; row < state.rows; row++) {
+            for (let col = 0; col < state.cols; col++) {
+                allIndices.push({ row, col });
+            }
+        }
         
-        // Exclude the first clicked cell and its neighbors
-        for (let dr = -1; dr <= 1; dr++) {
-            for (let dc = -1; dc <= 1; dc++) {
-                const r = excludeRow + dr;
-                const c = excludeCol + dc;
-                if (matrixIsValid(state.mineMatrix, r, c)) {
-                    excludeCells.add(`${r},${c}`);
+        // Filter out excluded cells (first clicked cell and its neighbors)
+        let availableIndices = allIndices;
+        if (excludeRow !== null && excludeCol !== null) {
+            const excludeCells = new Set();
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const r = excludeRow + dr;
+                    const c = excludeCol + dc;
+                    if (matrixIsValid(state.mineMatrix, r, c)) {
+                        excludeCells.add(`${r},${c}`);
+                    }
                 }
             }
+            availableIndices = allIndices.filter(
+                ({ row, col }) => !excludeCells.has(`${row},${col}`)
+            );
         }
         
-        while (minesPlaced < state.mineCount) {
-            const row = Math.floor(Math.random() * state.rows);
-            const col = Math.floor(Math.random() * state.cols);
-            
-            if (!matrixGet(state.mineMatrix, row, col) && !excludeCells.has(`${row},${col}`)) {
-                matrixSet(state.mineMatrix, row, col, true);
-                minesPlaced++;
-            }
+        // Shuffle the sequence using Fisher-Yates algorithm
+        for (let i = availableIndices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [availableIndices[i], availableIndices[j]] = [availableIndices[j], availableIndices[i]];
         }
+        
+        // Take first N indices where N is number of mines
+        const mineIndices = availableIndices.slice(0, state.mineCount);
+        
+        // Place mines at selected indices
+        mineIndices.forEach(({ row, col }) => {
+            matrixSet(state.mineMatrix, row, col, true);
+        });
         
         calculateNumbers();
     }
@@ -164,9 +181,15 @@ function createMinesweeperGame(rows = 9, cols = 9, mineCount = 10, domConfig = {
         if (matrixGet(state.revealedMatrix, row, col)) return;
         if (matrixGet(state.flaggedMatrix, row, col)) return;
         
-        // First click - place mines
+        // First click - ensure it's safe by replacing mines if needed
         if (state.firstClick) {
-            placeMines(row, col);
+            // If first click is on a mine or near mines, re-place mines
+            if (matrixGet(state.mineMatrix, row, col) || matrixGet(state.numberMatrix, row, col) > 0) {
+                // Clear current mines and re-place excluding the clicked area
+                state.mineMatrix = createMatrix(state.rows, state.cols, false);
+                state.numberMatrix = createMatrix(state.rows, state.cols, 0);
+                placeMines(row, col);
+            }
             state.firstClick = false;
             startTimer();
         }
@@ -330,8 +353,9 @@ function createMinesweeperGame(rows = 9, cols = 9, mineCount = 10, domConfig = {
         state.statusElement.textContent = '';
         state.statusElement.className = '';
         
-        updateMinesRemaining();
         renderBoard();
+        placeMines();
+        updateMinesRemaining();
     }
 
     // Initialize the game
