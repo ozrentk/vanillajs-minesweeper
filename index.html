@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesweeper - Vanilla JS</title>
+    <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+    <div id="app">
+        <h1>Minesweeper</h1>
+        <div id="game-container">
+            <div id="controls">
+                <button id="new-game">New Game</button>
+                <div id="game-info">
+                    <span>Mines: <span id="mine-count">10</span></span>
+                    <span>Time: <span id="timer">0</span>s</span>
+                </div>
+            </div>
+            <div id="board"></div>
+        </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
