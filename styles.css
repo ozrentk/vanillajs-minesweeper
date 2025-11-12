@@ -85,6 +85,8 @@ h1 {
 
 .game-board {
     display: inline-grid;
+    grid-template-columns: repeat(9, 40px);
+    grid-template-rows: repeat(9, 40px);
     gap: 2px;
     padding: 10px;
     background-color: #ddd;

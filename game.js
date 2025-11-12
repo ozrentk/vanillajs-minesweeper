@@ -1,99 +1,113 @@
 // Minesweeper Game - Vanilla JavaScript Implementation
 
-class Matrix {
-    constructor(rows, cols, defaultValue = 0) {
-        this.rows = rows;
-        this.cols = cols;
-        this.data = Array(rows).fill(null).map(() => 
+// Matrix utility functions (functional approach)
+function createMatrix(rows, cols, defaultValue = 0) {
+    return {
+        rows: rows,
+        cols: cols,
+        data: Array(rows).fill(null).map(() => 
             Array(cols).fill(defaultValue)
-        );
-    }
+        )
+    };
+}
 
-    get(row, col) {
-        if (this.isValid(row, col)) {
-            return this.data[row][col];
-        }
-        return undefined;
+function matrixGet(matrix, row, col) {
+    if (matrixIsValid(matrix, row, col)) {
+        return matrix.data[row][col];
     }
+    return undefined;
+}
 
-    set(row, col, value) {
-        if (this.isValid(row, col)) {
-            this.data[row][col] = value;
-            return true;
-        }
-        return false;
+function matrixSet(matrix, row, col, value) {
+    if (matrixIsValid(matrix, row, col)) {
+        matrix.data[row][col] = value;
+        return true;
     }
+    return false;
+}
 
-    isValid(row, col) {
-        return row >= 0 && row < this.rows && col >= 0 && col < this.cols;
-    }
+function matrixIsValid(matrix, row, col) {
+    return row >= 0 && row < matrix.rows && col >= 0 && col < matrix.cols;
+}
 
-    forEach(callback) {
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                callback(this.data[row][col], row, col);
-            }
+function matrixForEach(matrix, callback) {
+    for (let row = 0; row < matrix.rows; row++) {
+        for (let col = 0; col < matrix.cols; col++) {
+            callback(matrix.data[row][col], row, col);
         }
     }
 }
 
-class MinesweeperGame {
-    constructor(rows = 9, cols = 9, mineCount = 10) {
-        this.rows = rows;
-        this.cols = cols;
-        this.mineCount = mineCount;
-        this.firstClick = true;
-        this.gameOver = false;
-        this.gameWon = false;
-        this.timerStarted = false;
-        this.timerValue = 0;
-        this.timerInterval = null;
+// Minesweeper Game - Functional component approach
+function createMinesweeperGame(rows = 9, cols = 9, mineCount = 10, domConfig = {}) {
+    // Game state
+    const state = {
+        rows: rows,
+        cols: cols,
+        mineCount: mineCount,
+        firstClick: true,
+        gameOver: false,
+        gameWon: false,
+        timerStarted: false,
+        timerValue: 0,
+        timerInterval: null,
+        flagCount: 0,
         
         // Initialize matrices
-        this.mineMatrix = new Matrix(rows, cols, false);
-        this.revealedMatrix = new Matrix(rows, cols, false);
-        this.flaggedMatrix = new Matrix(rows, cols, false);
-        this.numberMatrix = new Matrix(rows, cols, 0);
+        mineMatrix: createMatrix(rows, cols, false),
+        revealedMatrix: createMatrix(rows, cols, false),
+        flaggedMatrix: createMatrix(rows, cols, false),
+        numberMatrix: createMatrix(rows, cols, 0),
         
-        this.flagCount = 0;
+        // DOM elements
+        boardElement: null,
+        minesRemainingElement: null,
+        timerElement: null,
+        statusElement: null,
+        newGameButton: null
+    };
+
+    // Initialize DOM with configurable element IDs
+    function initializeDOM(config) {
+        const {
+            boardId = 'game-board',
+            minesRemainingId = 'mines-remaining',
+            timerDisplayId = 'timer-display',
+            statusMessageId = 'status-message',
+            newGameBtnId = 'new-game-btn'
+        } = config;
         
-        this.initializeDOM();
+        state.boardElement = document.getElementById(boardId);
+        state.minesRemainingElement = document.getElementById(minesRemainingId);
+        state.timerElement = document.getElementById(timerDisplayId);
+        state.statusElement = document.getElementById(statusMessageId);
+        state.newGameButton = document.getElementById(newGameBtnId);
+        
+        state.newGameButton.addEventListener('click', () => resetGame());
+        
+        renderBoard();
+        updateMinesRemaining();
     }
 
-    initializeDOM() {
-        this.boardElement = document.getElementById('game-board');
-        this.minesRemainingElement = document.getElementById('mines-remaining');
-        this.timerElement = document.getElementById('timer-display');
-        this.statusElement = document.getElementById('status-message');
-        this.newGameButton = document.getElementById('new-game-btn');
+    function renderBoard() {
+        state.boardElement.innerHTML = '';
         
-        this.newGameButton.addEventListener('click', () => this.resetGame());
-        
-        this.renderBoard();
-        this.updateMinesRemaining();
-    }
-
-    renderBoard() {
-        this.boardElement.innerHTML = '';
-        this.boardElement.style.gridTemplateColumns = `repeat(${this.cols}, 40px)`;
-        this.boardElement.style.gridTemplateRows = `repeat(${this.rows}, 40px)`;
-        
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
+        for (let row = 0; row < state.rows; row++) {
+            for (let col = 0; col < state.cols; col++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 cell.dataset.row = row;
                 cell.dataset.col = col;
                 
-                cell.addEventListener('click', (e) => this.handleCellClick(row, col, e));
-                cell.addEventListener('contextmenu', (e) => this.handleCellRightClick(row, col, e));
+                cell.addEventListener('click', (e) => handleCellClick(row, col, e));
+                cell.addEventListener('contextmenu', (e) => handleCellRightClick(row, col, e));
                 
-                this.boardElement.appendChild(cell);
+                state.boardElement.appendChild(cell);
             }
         }
     }
 
-    placeMines(excludeRow, excludeCol) {
+    function placeMines(excludeRow, excludeCol) {
         let minesPlaced = 0;
         const excludeCells = new Set();
         
@@ -102,130 +116,130 @@ class MinesweeperGame {
             for (let dc = -1; dc <= 1; dc++) {
                 const r = excludeRow + dr;
                 const c = excludeCol + dc;
-                if (this.mineMatrix.isValid(r, c)) {
+                if (matrixIsValid(state.mineMatrix, r, c)) {
                     excludeCells.add(`${r},${c}`);
                 }
             }
         }
         
-        while (minesPlaced < this.mineCount) {
-            const row = Math.floor(Math.random() * this.rows);
-            const col = Math.floor(Math.random() * this.cols);
+        while (minesPlaced < state.mineCount) {
+            const row = Math.floor(Math.random() * state.rows);
+            const col = Math.floor(Math.random() * state.cols);
             
-            if (!this.mineMatrix.get(row, col) && !excludeCells.has(`${row},${col}`)) {
-                this.mineMatrix.set(row, col, true);
+            if (!matrixGet(state.mineMatrix, row, col) && !excludeCells.has(`${row},${col}`)) {
+                matrixSet(state.mineMatrix, row, col, true);
                 minesPlaced++;
             }
         }
         
-        this.calculateNumbers();
+        calculateNumbers();
     }
 
-    calculateNumbers() {
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (!this.mineMatrix.get(row, col)) {
+    function calculateNumbers() {
+        for (let row = 0; row < state.rows; row++) {
+            for (let col = 0; col < state.cols; col++) {
+                if (!matrixGet(state.mineMatrix, row, col)) {
                     let count = 0;
                     for (let dr = -1; dr <= 1; dr++) {
                         for (let dc = -1; dc <= 1; dc++) {
                             if (dr === 0 && dc === 0) continue;
                             const newRow = row + dr;
                             const newCol = col + dc;
-                            if (this.mineMatrix.isValid(newRow, newCol) && 
-                                this.mineMatrix.get(newRow, newCol)) {
+                            if (matrixIsValid(state.mineMatrix, newRow, newCol) && 
+                                matrixGet(state.mineMatrix, newRow, newCol)) {
                                 count++;
                             }
                         }
                     }
-                    this.numberMatrix.set(row, col, count);
+                    matrixSet(state.numberMatrix, row, col, count);
                 }
             }
         }
     }
 
-    handleCellClick(row, col, event) {
+    function handleCellClick(row, col, event) {
         event.preventDefault();
         
-        if (this.gameOver || this.gameWon) return;
-        if (this.revealedMatrix.get(row, col)) return;
-        if (this.flaggedMatrix.get(row, col)) return;
+        if (state.gameOver || state.gameWon) return;
+        if (matrixGet(state.revealedMatrix, row, col)) return;
+        if (matrixGet(state.flaggedMatrix, row, col)) return;
         
         // First click - place mines
-        if (this.firstClick) {
-            this.placeMines(row, col);
-            this.firstClick = false;
-            this.startTimer();
+        if (state.firstClick) {
+            placeMines(row, col);
+            state.firstClick = false;
+            startTimer();
         }
         
-        this.revealCell(row, col);
+        revealCell(row, col);
     }
 
-    handleCellRightClick(row, col, event) {
+    function handleCellRightClick(row, col, event) {
         event.preventDefault();
         
-        if (this.gameOver || this.gameWon) return;
-        if (this.revealedMatrix.get(row, col)) return;
+        if (state.gameOver || state.gameWon) return;
+        if (matrixGet(state.revealedMatrix, row, col)) return;
         
-        const isFlagged = this.flaggedMatrix.get(row, col);
-        this.flaggedMatrix.set(row, col, !isFlagged);
+        const isFlagged = matrixGet(state.flaggedMatrix, row, col);
+        matrixSet(state.flaggedMatrix, row, col, !isFlagged);
         
         if (isFlagged) {
-            this.flagCount--;
+            state.flagCount--;
         } else {
-            this.flagCount++;
+            state.flagCount++;
         }
         
-        this.updateMinesRemaining();
-        this.updateCell(row, col);
+        updateMinesRemaining();
+        updateCell(row, col);
     }
 
-    revealCell(row, col) {
-        if (!this.mineMatrix.isValid(row, col)) return;
-        if (this.revealedMatrix.get(row, col)) return;
-        if (this.flaggedMatrix.get(row, col)) return;
+    function revealCell(row, col) {
+        if (!matrixIsValid(state.mineMatrix, row, col)) return;
+        if (matrixGet(state.revealedMatrix, row, col)) return;
+        if (matrixGet(state.flaggedMatrix, row, col)) return;
         
-        this.revealedMatrix.set(row, col, true);
+        matrixSet(state.revealedMatrix, row, col, true);
         
         // Hit a mine
-        if (this.mineMatrix.get(row, col)) {
-            this.gameOver = true;
-            this.endGame(false);
+        if (matrixGet(state.mineMatrix, row, col)) {
+            state.gameOver = true;
+            endGame(false);
             return;
         }
         
-        this.updateCell(row, col);
+        updateCell(row, col);
         
         // If empty cell (no adjacent mines), reveal neighbors
-        if (this.numberMatrix.get(row, col) === 0) {
+        if (matrixGet(state.numberMatrix, row, col) === 0) {
             for (let dr = -1; dr <= 1; dr++) {
                 for (let dc = -1; dc <= 1; dc++) {
                     if (dr === 0 && dc === 0) continue;
-                    this.revealCell(row + dr, col + dc);
+                    revealCell(row + dr, col + dc);
                 }
             }
         }
         
-        this.checkWinCondition();
+        checkWinCondition();
     }
 
-    updateCell(row, col) {
-        const cell = this.boardElement.querySelector(
+    function updateCell(row, col) {
+        const cell = state.boardElement.querySelector(
             `[data-row="${row}"][data-col="${col}"]`
         );
         
         if (!cell) return;
         
-        if (this.flaggedMatrix.get(row, col)) {
+        if (matrixGet(state.flaggedMatrix, row, col)) {
             cell.className = 'cell flagged';
             cell.textContent = '🚩';
-        } else if (this.revealedMatrix.get(row, col)) {
+        } else if (matrixGet(state.revealedMatrix, row, col)) {
             cell.className = 'cell revealed';
             
-            if (this.mineMatrix.get(row, col)) {
+            if (matrixGet(state.mineMatrix, row, col)) {
                 cell.classList.add('mine');
                 cell.textContent = '💣';
             } else {
-                const number = this.numberMatrix.get(row, col);
+                const number = matrixGet(state.numberMatrix, row, col);
                 if (number > 0) {
                     cell.textContent = number;
                     cell.classList.add(`number-${number}`);
@@ -239,89 +253,104 @@ class MinesweeperGame {
         }
     }
 
-    updateMinesRemaining() {
-        const remaining = this.mineCount - this.flagCount;
-        this.minesRemainingElement.textContent = remaining.toString().padStart(2, '0');
+    function updateMinesRemaining() {
+        const remaining = state.mineCount - state.flagCount;
+        state.minesRemainingElement.textContent = remaining.toString().padStart(2, '0');
     }
 
-    startTimer() {
-        if (this.timerStarted) return;
-        this.timerStarted = true;
+    function startTimer() {
+        if (state.timerStarted) return;
+        state.timerStarted = true;
         
-        this.timerInterval = setInterval(() => {
-            this.timerValue++;
-            this.timerElement.textContent = this.timerValue.toString().padStart(3, '0');
+        state.timerInterval = setInterval(() => {
+            state.timerValue++;
+            state.timerElement.textContent = state.timerValue.toString().padStart(3, '0');
         }, 1000);
     }
 
-    stopTimer() {
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
+    function stopTimer() {
+        if (state.timerInterval) {
+            clearInterval(state.timerInterval);
+            state.timerInterval = null;
         }
     }
 
-    checkWinCondition() {
+    function checkWinCondition() {
         let revealedCount = 0;
-        let totalSafeCells = this.rows * this.cols - this.mineCount;
+        let totalSafeCells = state.rows * state.cols - state.mineCount;
         
-        this.revealedMatrix.forEach((revealed) => {
+        matrixForEach(state.revealedMatrix, (revealed) => {
             if (revealed) revealedCount++;
         });
         
         if (revealedCount === totalSafeCells) {
-            this.gameWon = true;
-            this.endGame(true);
+            state.gameWon = true;
+            endGame(true);
         }
     }
 
-    endGame(won) {
-        this.stopTimer();
+    function endGame(won) {
+        stopTimer();
         
         if (won) {
-            this.statusElement.textContent = '🎉 You Won! Congratulations!';
-            this.statusElement.className = 'win';
+            state.statusElement.textContent = '🎉 You Won! Congratulations!';
+            state.statusElement.className = 'win';
         } else {
-            this.statusElement.textContent = '💥 Game Over! You hit a mine.';
-            this.statusElement.className = 'lose';
-            this.revealAllMines();
+            state.statusElement.textContent = '💥 Game Over! You hit a mine.';
+            state.statusElement.className = 'lose';
+            revealAllMines();
         }
     }
 
-    revealAllMines() {
-        this.mineMatrix.forEach((isMine, row, col) => {
+    function revealAllMines() {
+        matrixForEach(state.mineMatrix, (isMine, row, col) => {
             if (isMine) {
-                this.revealedMatrix.set(row, col, true);
-                this.updateCell(row, col);
+                matrixSet(state.revealedMatrix, row, col, true);
+                updateCell(row, col);
             }
         });
     }
 
-    resetGame() {
-        this.stopTimer();
+    function resetGame() {
+        stopTimer();
         
-        this.firstClick = true;
-        this.gameOver = false;
-        this.gameWon = false;
-        this.timerStarted = false;
-        this.timerValue = 0;
-        this.flagCount = 0;
+        state.firstClick = true;
+        state.gameOver = false;
+        state.gameWon = false;
+        state.timerStarted = false;
+        state.timerValue = 0;
+        state.flagCount = 0;
         
-        this.mineMatrix = new Matrix(this.rows, this.cols, false);
-        this.revealedMatrix = new Matrix(this.rows, this.cols, false);
-        this.flaggedMatrix = new Matrix(this.rows, this.cols, false);
-        this.numberMatrix = new Matrix(this.rows, this.cols, 0);
+        state.mineMatrix = createMatrix(state.rows, state.cols, false);
+        state.revealedMatrix = createMatrix(state.rows, state.cols, false);
+        state.flaggedMatrix = createMatrix(state.rows, state.cols, false);
+        state.numberMatrix = createMatrix(state.rows, state.cols, 0);
         
-        this.timerElement.textContent = '000';
-        this.statusElement.textContent = '';
-        this.statusElement.className = '';
+        state.timerElement.textContent = '000';
+        state.statusElement.textContent = '';
+        state.statusElement.className = '';
         
-        this.updateMinesRemaining();
-        this.renderBoard();
+        updateMinesRemaining();
+        renderBoard();
     }
+
+    // Initialize the game
+    initializeDOM(domConfig);
+
+    // Return public API
+    return {
+        resetGame,
+        initializeDOM
+    };
 }
 
 // Initialize the game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    const game = new MinesweeperGame(9, 9, 10);
+    const game = createMinesweeperGame(9, 9, 10, {
+        boardId: 'game-board',
+        minesRemainingId: 'mines-remaining',
+        timerDisplayId: 'timer-display',
+        statusMessageId: 'status-message',
+        newGameBtnId: 'new-game-btn'
+    });
 });
