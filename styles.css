@@ -1,0 +1,158 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    max-width: 600px;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.game-controls {
+    margin-bottom: 20px;
+}
+
+.info-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    gap: 20px;
+}
+
+.mines-count,
+.timer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.label {
+    color: #666;
+    font-weight: normal;
+}
+
+#mines-remaining,
+#timer-display {
+    color: #e74c3c;
+    font-family: 'Courier New', monospace;
+    min-width: 40px;
+}
+
+.new-game-btn {
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.new-game-btn:hover {
+    background-color: #2980b9;
+}
+
+.new-game-btn:active {
+    transform: scale(0.98);
+}
+
+.game-board {
+    display: inline-grid;
+    gap: 2px;
+    padding: 10px;
+    background-color: #ddd;
+    border-radius: 5px;
+    margin: 0 auto;
+}
+
+.cell {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #999;
+    background-color: #bbb;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.1s;
+}
+
+.cell:hover:not(.revealed):not(.flagged) {
+    background-color: #ccc;
+}
+
+.cell.revealed {
+    background-color: #fff;
+    border-color: #ccc;
+    cursor: default;
+}
+
+.cell.flagged {
+    background-color: #ffa500;
+    color: red;
+    font-size: 20px;
+}
+
+.cell.mine {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.cell.number-1 { color: #0000ff; }
+.cell.number-2 { color: #008000; }
+.cell.number-3 { color: #ff0000; }
+.cell.number-4 { color: #000080; }
+.cell.number-5 { color: #800000; }
+.cell.number-6 { color: #008080; }
+.cell.number-7 { color: #000000; }
+.cell.number-8 { color: #808080; }
+
+.game-status {
+    margin-top: 20px;
+    text-align: center;
+}
+
+#status-message {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    min-height: 24px;
+}
+
+#status-message.win {
+    color: #27ae60;
+}
+
+#status-message.lose {
+    color: #e74c3c;
+}
